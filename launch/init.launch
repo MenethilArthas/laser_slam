@@ -1,0 +1,8 @@
+<launch>
+    <node pkg="laser_slam" name="motor_control" type="motor_control" output="screen"/>
+    <node pkg="laser_slam" name="key_cmd" type ="key_cmd.py"/>
+    <node pkg="laser_slam" name="coor_receiver" type="coor_receiver">
+        <param name="port" type="string" value="/dev/serialPort"/>
+        <param name="baudRate" type="int" value="115200"/>
+    </node>
+</launch>
