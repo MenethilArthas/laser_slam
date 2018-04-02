@@ -2,7 +2,7 @@
 #include "std_msgs/String.h"
 #include "serial/serial.h"
 #include "laser_slam/coor.h"
-
+#include "tf/transform_broadcaster.h"
 
 union unionCoor
 {
@@ -20,11 +20,19 @@ int main(int argc,char **argv)
 	static int count=0;
 	bool updateFlag=false;
 	laser_slam::coor coorMsg;
-
-	/*init ros node*/
-	ros::init(argc,argv,"coor_receiver");
+	
+    /*init ros node*/
+	ros::init(argc,argv,"pub_odom");
 	ros::NodeHandle n;
 	
+    tf::TransformBroadcaster tfb;
+    geometry_msgs::TransformStamped laser2BaseLinkTrans;
+    geometry_msgs::TransformStamped baseLink2WorldTrans;
+    
+	baseLink2WorldTrans.header.frame_id = "world";
+    baseLink2WorldTrans.child_frame_id = "base_link";
+    laser2BaseLinkTrans.header.frame_id="base_link";
+    laser2BaseLinkTrans.child_frame_id="laser";
 	/*get the serial parameters*/
 	ros::param::get("~port",port.data);
 	ros::param::get("~baudRate",baudrate);
@@ -95,7 +103,21 @@ int main(int argc,char **argv)
 		if(updateFlag==true)
 		{
 			updateFlag=false;
-			ROS_INFO("x=%f,y=%f,angle=%f",coorMsg.x,coorMsg.y,coorMsg.angle);
+            /*set the transform of base_link */
+			baseLink2WorldTrans.header.stamp = ros::Time::now();
+	        baseLink2WorldTrans.transform.translation.x = coorMsg.x/1000.0;
+	        baseLink2WorldTrans.transform.translation.y = coorMsg.y/1000.0;
+	        baseLink2WorldTrans.transform.translation.z = 0.0;
+	        baseLink2WorldTrans.transform.rotation = tf::createQuaternionMsgFromYaw(coorMsg.angle/360.0*2*3.1415);
+	        /*set the transform of laser*/
+			laser2BaseLinkTrans.header.stamp = ros::Time::now();
+	        laser2BaseLinkTrans.transform.translation.x = 0.0;
+	        laser2BaseLinkTrans.transform.translation.y = 0.0;
+	        laser2BaseLinkTrans.transform.translation.z = 0.1;
+	        laser2BaseLinkTrans.transform.rotation = tf::createQuaternionMsgFromYaw(0.0);
+            tfb.sendTransform(laser2BaseLinkTrans);
+            tfb.sendTransform(baseLink2WorldTrans);
+			//ROS_INFO("x=%f,y=%f,angle=%f",coorMsg.x,coorMsg.y,coorMsg.angle);
 			coor_pub.publish(coorMsg);
 		}
 		

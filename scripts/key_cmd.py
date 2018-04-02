@@ -17,7 +17,7 @@ def getKey():
     if rlist:
         key = sys.stdin.read(1)
     else:
-        key = 'c'
+        key = 'x'
 
     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
     return key

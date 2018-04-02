@@ -76,23 +76,23 @@ void MotorController::KeyCmdCallback(const std_msgs::String::ConstPtr& msg)
 		{
 			case 'w':
 				driver1.SetVel(0);
-				driver2.SetVel(-10000);
-				driver3.SetVel(10000);
+				driver2.SetVel(-30000);
+				driver3.SetVel(30000);
 				break;
 			case 'a':
-				driver1.SetVel(-10000);
-				driver2.SetVel(5000);
-				driver3.SetVel(5000);
+				driver1.SetVel(-30000);
+				driver2.SetVel(15000);
+				driver3.SetVel(15000);
 				break;
 			case 's':
 				driver1.SetVel(0);
-				driver2.SetVel(10000);
-				driver3.SetVel(-10000);
+				driver2.SetVel(30000);
+				driver3.SetVel(-30000);
 				break;
 			case 'd':
-				driver1.SetVel(10000);
-				driver2.SetVel(-5000);
-				driver3.SetVel(-5000);
+				driver1.SetVel(30000);
+				driver2.SetVel(-15000);
+				driver3.SetVel(-15000);
 				break;
 			case 'c':
 				driver1.SetVel(0);
@@ -100,14 +100,14 @@ void MotorController::KeyCmdCallback(const std_msgs::String::ConstPtr& msg)
 				driver3.SetVel(0);
 				break;
 			case 'q':
-				driver1.SetVel(-5000);
-				driver2.SetVel(-5000);
-				driver3.SetVel(-5000);
+				driver1.SetVel(-15000);
+				driver2.SetVel(-15000);
+				driver3.SetVel(-15000);
 				break;
 			case 'e':
-				driver1.SetVel(5000);
-				driver2.SetVel(5000);
-				driver3.SetVel(5000);
+				driver1.SetVel(15000);
+				driver2.SetVel(15000);
+				driver3.SetVel(15000);
 				break;
 		}
 		preCmd=cmd;

@@ -8,6 +8,7 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   roslaunch
   roscpp
+  tf
   rospy
   std_msgs
   message_generation
@@ -45,12 +46,13 @@ include_directories(
 link_directories("~/serial/build/devel/lib" include)
 
 add_executable(coor_receiver src/coor_receiver.cpp)
-target_link_libraries(coor_receiver libserial.so ${catkin_LIBRARIES})
+target_link_libraries(coor_receiver ${catkin_LIBRARIES} libserial.so)
 
 
 add_executable(motor_control src/motor_control.cpp src/action_driver.cpp)
 target_link_libraries(motor_control ${catkin_LIBRARIES})
 
-
+add_executable(laser_slam src/laser_slam.cpp)
+target_link_libraries(laser_slam ${catkin_LIBRARIES})
 
 

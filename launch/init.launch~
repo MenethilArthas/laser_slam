@@ -1,5 +1,5 @@
 <launch>
-    <include file="$(find laser_slam)/launch/rplidar.launch"/>
+    <include file="$(find rplidar_ros)/launch/rplidar.launch"/>
     <node pkg="laser_slam" name="motor_control" type="motor_control" output="screen"/>
     <node pkg="laser_slam" name="key_cmd" type ="key_cmd.py"/>
     <node pkg="laser_slam" name="ls" type="laser_slam"/>
