@@ -15,6 +15,7 @@ class MotorController
 		MotorController();
 		bool InitDriver();
 		void KeyCmdCallback(const std_msgs::String::ConstPtr& msg);
+		void Close();
 	private:
 		ros::NodeHandle n;
 		ros::Subscriber sub;
@@ -65,8 +66,7 @@ bool MotorController::InitDriver()
 }
 
 void MotorController::KeyCmdCallback(const std_msgs::String::ConstPtr& msg)
-{
-	
+{	
 	char cmd=msg->data.c_str()[0];
 	static char preCmd = 0;
 	if(cmd!=preCmd)
@@ -76,23 +76,23 @@ void MotorController::KeyCmdCallback(const std_msgs::String::ConstPtr& msg)
 		{
 			case 'w':
 				driver1.SetVel(0);
-				driver2.SetVel(-30000);
-				driver3.SetVel(30000);
+				driver2.SetVel(-20000);
+				driver3.SetVel(20000);
 				break;
 			case 'a':
-				driver1.SetVel(-30000);
-				driver2.SetVel(15000);
-				driver3.SetVel(15000);
+				driver1.SetVel(-20000);
+				driver2.SetVel(10000);
+				driver3.SetVel(10000);
 				break;
 			case 's':
 				driver1.SetVel(0);
-				driver2.SetVel(30000);
-				driver3.SetVel(-30000);
+				driver2.SetVel(20000);
+				driver3.SetVel(-20000);
 				break;
 			case 'd':
-				driver1.SetVel(30000);
-				driver2.SetVel(-15000);
-				driver3.SetVel(-15000);
+				driver1.SetVel(20000);
+				driver2.SetVel(-10000);
+				driver3.SetVel(-10000);
 				break;
 			case 'c':
 				driver1.SetVel(0);
@@ -100,14 +100,14 @@ void MotorController::KeyCmdCallback(const std_msgs::String::ConstPtr& msg)
 				driver3.SetVel(0);
 				break;
 			case 'q':
-				driver1.SetVel(-15000);
-				driver2.SetVel(-15000);
-				driver3.SetVel(-15000);
+				driver1.SetVel(-10000);
+				driver2.SetVel(-10000);
+				driver3.SetVel(-10000);
 				break;
 			case 'e':
-				driver1.SetVel(15000);
-				driver2.SetVel(15000);
-				driver3.SetVel(15000);
+				driver1.SetVel(10000);
+				driver2.SetVel(10000);
+				driver3.SetVel(10000);
 				break;
 		}
 		preCmd=cmd;
@@ -115,6 +115,11 @@ void MotorController::KeyCmdCallback(const std_msgs::String::ConstPtr& msg)
 
 
 }
+void MotorController::Close()
+{
+	close(s);
+}
+
 
 int main(int argc,char** argv)
 {
@@ -126,7 +131,7 @@ int main(int argc,char** argv)
 	else
 		ROS_INFO("Init Driver success.");
 	ros::spin();
-    close(s);
+    motorController.Close();
     return 1;
 
 

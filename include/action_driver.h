@@ -1,3 +1,5 @@
+#ifndef ACTION_DRIVER_H_
+#define ACTION_DRIVER_H_
 
 #define SDOTX  0x600
 
@@ -13,3 +15,6 @@ class ActionDriver
 		int m_canId;
 		int m_s;
 };
+
+
+#endif

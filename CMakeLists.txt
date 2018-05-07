@@ -4,6 +4,7 @@ project(laser_slam)
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
 
+#catkin_make -DCMAKE_BUILD_TYPE=Debug 
 
 find_package(catkin REQUIRED COMPONENTS
   roslaunch
@@ -49,10 +50,10 @@ add_executable(coor_receiver src/coor_receiver.cpp)
 target_link_libraries(coor_receiver ${catkin_LIBRARIES} libserial.so)
 
 
-add_executable(motor_control src/motor_control.cpp src/action_driver.cpp)
-target_link_libraries(motor_control ${catkin_LIBRARIES})
+#add_executable(motor_control src/motor_control.cpp src/action_driver.cpp)
+#target_link_libraries(motor_control ${catkin_LIBRARIES})
 
-add_executable(laser_slam src/laser_slam.cpp)
+add_executable(laser_slam src/laser_slam.cpp src/mapper.cpp)
 target_link_libraries(laser_slam ${catkin_LIBRARIES})
 
 

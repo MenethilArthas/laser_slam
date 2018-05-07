@@ -1,0 +1,3 @@
+<launch>
+    <node pkg="laser_slam" name="ls" type="laser_slam" output="screen"  />
+</launch>
