@@ -119,10 +119,10 @@ int main(int argc,char **argv)
 			
             /*set the transform of base_link */
 			baseLink2WorldTrans.header.stamp = ros::Time::now();
-	        baseLink2WorldTrans.transform.translation.x = originalPose.GetX()/1000.0;
-	        baseLink2WorldTrans.transform.translation.y = originalPose.GetY()/1000.0;
+	        baseLink2WorldTrans.transform.translation.x = convertedPose.GetX()/1000.0;
+	        baseLink2WorldTrans.transform.translation.y = convertedPose.GetY()/1000.0;
 	        baseLink2WorldTrans.transform.translation.z = 0.0;
-	        baseLink2WorldTrans.transform.rotation = tf::createQuaternionMsgFromYaw(originalPose.GetHeading());
+	        baseLink2WorldTrans.transform.rotation = tf::createQuaternionMsgFromYaw(convertedPose.GetHeading());
 	        /*set the transform of laser*/
 			laser2BaseLinkTrans.header.stamp = ros::Time::now();
 	        laser2BaseLinkTrans.transform.translation.x = 0.0;

@@ -2,6 +2,8 @@
 #include "mapper.h"
 #include "ros/ros.h"
 #include <iostream>
+#include<cmath>
+#include <exception>
 
 LinearFunc::LinearFunc (Point A,Point B)
 {
@@ -29,7 +31,6 @@ LinearFunc::LinearFunc (Point A,Point B)
 		else
 			m_type = 1;
 	}	
-
 }
 double LinearFunc::CalcResult(int var)
 {
@@ -93,6 +94,10 @@ bool Mapper::Process(LocalizedScan* rScan)
 			Matrix3 covariance;
 			covariance.SetToIdentity();
 			ScanMatch(rScan,bestPose,covariance);
+			
+			ROS_INFO("offset x:%f,y:%f,angle:%f",bestPose.GetX()-rScan->GetOdomPose().GetX(),
+				bestPose.GetY()-rScan->GetOdomPose().GetY(),bestPose.GetHeading()-rScan->GetOdomPose().GetHeading()
+			);
 			rScan->SetCorrectedPose(bestPose);
 			SetLastScanPtr(rScan);		
 			AddRunningScan(rScan);
@@ -149,16 +154,17 @@ double Mapper::ScanMatch(LocalizedScan* rScan,Pose2& rbestPose,Matrix3& rCovaria
 	Cell cell;
 	GetCellBlocks(cell);
 	FillCellBlocks(&cell);
+//	ROS_INFO("create cell sucess.");
 	bestScore=Score(&cell,bestPose,rScan);
 	
 	Pose2 newPose(0.0 , 0.0 , 0.0);
-	ros::Time lastTime=ros::Time::now();
+
 	
 	while(iterations<maxIterations)
 	{
 		maxMoveScore=bestScore;
-		std::cout<<"iter="<<iterations<<std::endl;
- 		std::cout<<"maxMoveScore="<<maxMoveScore<<"\tsearchAngleStep="<<searchAngleStep<<"\tsearchPosStep="<<searchPosStep<<std::endl;
+ 		std::cout<<"iter="<<iterations<<std::endl;
+  		std::cout<<"maxMoveScore="<<maxMoveScore<<"\tsearchAngleStep="<<searchAngleStep<<"\tsearchPosStep="<<searchPosStep<<std::endl;
 		for(move=FORWARD;move!=(ROTATE_RIGHT+1);move++)
 		{
 			switch(move)
@@ -195,7 +201,7 @@ double Mapper::ScanMatch(LocalizedScan* rScan,Pose2& rbestPose,Matrix3& rCovaria
 					break;
 			}
 			moveScore=Score(&cell,movePose,rScan);
- 			std::cout<<moveScore<<std::endl;
+  			std::cout<<moveScore<<std::endl;
 			if(moveScore>maxMoveScore)
 			{
 				maxMoveScore=moveScore;
@@ -218,11 +224,27 @@ double Mapper::ScanMatch(LocalizedScan* rScan,Pose2& rbestPose,Matrix3& rCovaria
 		}	
 	
 	}
-	ros::Time nowTime=ros::Time::now();
 	rbestPose=bestPose;
- 	ROS_INFO("bestPose:x=%f,y=%f,angle=%f\r\n",bestPose.GetX(),bestPose.GetY(),bestPose.GetHeading());
-	ROS_INFO("scan match time=%f",(nowTime-lastTime).toSec());
+  	ROS_INFO("bestPose:x=%f,y=%f,angle=%f\r\n",bestPose.GetX(),bestPose.GetY(),bestPose.GetHeading());
+
 	return bestScore;
+}
+
+void Mapper::CalcKernel()
+{
+	int halfKernelSize=m_kernelSize/2;
+	m_pKernel=new int8_t[m_kernelSize*m_kernelSize];
+	for(int i=-halfKernelSize;i<=halfKernelSize;i++)
+	{
+		for(int j=-halfKernelSize;j<=halfKernelSize;j++)
+		{
+			double distanceFromMean=hypot(i,j)/3;
+			double z=exp(-0.5*pow(distanceFromMean,2));
+			int kernelValue=(int8_t)(z*gridStatus_Occupied);
+			int kernelArrayIndex=(halfKernelSize+i)+(m_kernelSize)*(j+halfKernelSize);
+			m_pKernel[kernelArrayIndex]=kernelValue;
+		}
+	}
 }
 
 void Mapper::GetCellBlocks(Cell& cell)
@@ -263,12 +285,13 @@ void Mapper::GetCellBlocks(Cell& cell)
 		angle=0.0;
 	}
 	//std::cout<<"maxX="<<maxX<<"\tmaxY="<<maxY<<"\tminX="<<minX<<"\tminY="<<minY<<std::endl;	
-	minPointX=(int)(minX/m_resolution);
-	minPointY=(int)(minY/m_resolution);
+	//scan match 这里的分辨率都是0.01
+	minPointX=(int)(minX/m_scanMatchResolution)-(int)(m_kernelSize/2);
+	minPointY=(int)(minY/m_scanMatchResolution)-(int)(m_kernelSize/2);
 	originPoint.SetX(minPointX);
 	originPoint.SetY(minPointY);
-	gridWidth=(int)((maxX-minX)/m_resolution);
-	gridHeight=(int)((maxY-minY)/m_resolution);
+	gridWidth=(int)((maxX-minX)/m_scanMatchResolution)+m_kernelSize;
+	gridHeight=(int)((maxY-minY)/m_scanMatchResolution)+m_kernelSize;
 	
 	if(gridWidth%cellBlock::size==0)
 		cellWidth=gridWidth/(cellBlock::size);
@@ -278,12 +301,15 @@ void Mapper::GetCellBlocks(Cell& cell)
 		cellHeight=gridHeight/(cellBlock::size);
 	else 
 		cellHeight=gridHeight/(cellBlock::size)+1;
-	//ROS_INFO("gridWidth=%d\t,gridHeight=%d\t,cellWidth=%d\t,cellHeight=%d",gridWidth,gridHeight,cellWidth,cellHeight);
+// 	ROS_INFO("gridWidth=%d\t,gridHeight=%d\t,cellWidth=%d\t,cellHeight=%d",gridWidth,gridHeight,cellWidth,cellHeight);
 	cell.SetOriginPoint(originPoint);
-	cell.SetHeight(cellHeight);
-	cell.SetWidth(cellWidth);
+	cell.SetHeight(gridHeight);
+	cell.SetWidth(gridWidth);
 	cell.InitCellBlocks();
-	
+	cell.SetKernelSize(m_kernelSize);
+ //	std::cout<<"addr begin="<<(void*)cell.GetDataPtr()<<" addr end="<<(void*)(cell.GetDataPtr()+gridHeight*gridWidth)<<std::endl;
+	if(m_pKernel==nullptr)
+		CalcKernel();
 }
 
 void Mapper::FillCellBlocks(Cell* cell)
@@ -294,20 +320,59 @@ void Mapper::FillCellBlocks(Cell* cell)
 	float angle=0.0;
 	Point originPoint;
 	float angleIncrement=LocalizedScan::m_angleIncrement;
-	std::cout<<"running scan size="<<m_runningScans.size()<<std::endl;
+	//std::cout<<"running scan size="<<m_runningScans.size()<<std::endl;
+	int halfKernelSize=m_kernelSize/2;
+	
 	for(std::vector<LocalizedScan*>::const_iterator itLocalizedScan=m_runningScans.begin() ; itLocalizedScan!=m_runningScans.end() ; itLocalizedScan++)
 	{
 		correctedPose=(*itLocalizedScan)->GetCorrectedPose();
 		VectorFloat readings=(*itLocalizedScan)->GetReadings();
 		for(std::vector<float>::const_iterator itReading=readings.begin();itReading!=readings.end();itReading++)
-		{
+		{							
 			if((*itReading)<=LocalizedScan::m_maxRange&&(*itReading)>=LocalizedScan::m_minRange)
 			{
 				poseX2World=-(*itReading) * std::cos(angle + correctedPose.GetHeading()) + correctedPose.GetX();
 				poseY2World=-(*itReading) * std::sin(angle + correctedPose.GetHeading()) +correctedPose.GetY();
-				hitPoint.SetX((int)(poseX2World/m_resolution));
-				hitPoint.SetY((int)(poseY2World/m_resolution));
-				cell->AddPoint(hitPoint);
+				hitPoint.SetX((int)(poseX2World/m_scanMatchResolution));
+				hitPoint.SetY((int)(poseY2World/m_scanMatchResolution));		
+
+ 				int8_t* pHitGridAddr=cell->GetDataPtr(hitPoint,true);
+				if(pHitGridAddr!=nullptr)
+				{
+					pHitGridAddr[0]=gridStatus_Occupied;
+					for(int j=-halfKernelSize;j<=halfKernelSize;j++)
+					{
+						int8_t* pGridAddr=cell->GetDataPtr(Point(hitPoint.GetX(),hitPoint.GetY()+j),false);
+						int index=0;
+						for(int i=-halfKernelSize;i<=halfKernelSize;i++)
+						{
+							if((pGridAddr+i)>=(cell->GetDataPtr()+cell->GetWidth()*cell->GetHeight()-1)||(pGridAddr+i)<(cell->GetDataPtr()))
+							{
+								std::cout<<"pGridAddr+i="<<pGridAddr+i<<std::endl;
+								std::cout<<"addr begin="<<(void*)cell->GetDataPtr()<<" addr end="<<(void*)(cell->GetDataPtr()+cell->GetWidth()*cell->GetHeight())<<std::endl;
+								std::cout<<"hitpoint("<<hitPoint.GetX()<<","<<hitPoint.GetY()+j+i<<")";
+								std::cout<<" originpoint("<<cell->GetOriginPoint().GetX()<<","<<cell->GetOriginPoint().GetY()<<")"<<std::endl;
+								std::cout<<"width="<<cell->GetWidth()<<" height="<<cell->GetHeight()<<std::endl;		
+							} 
+							int kernelArrayIndex=(i+halfKernelSize)+m_kernelSize*(j+halfKernelSize);
+
+							int8_t kernelValue=m_pKernel[kernelArrayIndex];
+							if(kernelValue>pGridAddr[i])
+							{
+								try
+								{
+									pGridAddr[i]=kernelValue;
+								}
+								catch(std::exception& e)
+								{
+									std::cout<<"what fuck.";
+									std::cout << "Standard exception: " << e.what() << std::endl;  
+								}
+							}
+								
+						}
+					}					
+				}
 			}
 			angle+=angleIncrement;
 		}
@@ -323,29 +388,51 @@ double Mapper::Score(Cell* cell,Pose2 rPose,LocalizedScan* rScan)
 	float angleIncrement=LocalizedScan::m_angleIncrement;
 	int index=0;
 	double score=0.0;
-	for(std::vector<float>::const_iterator iter=rScan->GetReadings().begin();iter!=rScan->GetReadings().end();iter++)
+	int laserCount=0;
+// 	std::cout<<"originpoint("<<cell->GetOriginPoint().GetX()<<","<<cell->GetOriginPoint().GetY()<<")";
+// 	std::cout<<"width="<<cell->GetWidth()<<" height="<<cell->GetHeight();
+	//for(int i=0;i<rScan->GetLaserCount();i++)
+	int i=0;
+	for(std::vector<float>::const_iterator iter=rScan->GetReadings().begin();iter!=rScan->GetReadings().end()&&i<rScan->GetLaserCount();iter++)
 	{
+		i++;
 		if((*iter)<=LocalizedScan::m_maxRange&&(*iter)>=LocalizedScan::m_minRange)
 		{
 			poseX2World=-(*iter) * std::cos(angle + rPose.GetHeading()) + rPose.GetX();
 			poseY2World=-(*iter) * std::sin( angle + rPose.GetHeading()) + rPose.GetY();
-			hitPoint.SetX((int)(poseX2World/m_resolution));
-			hitPoint.SetY((int)(poseY2World/m_resolution));
-			if(cell->GetCellIndex(hitPoint,index)==true)
-			{
-// 				if(index>800)
-// 					std::cout<<"index\t"<<index;
-				score+=cell->GetScore(index,hitPoint);			
-			}
-			else
-			{
-				continue;
+			hitPoint.SetX((int)(poseX2World/m_scanMatchResolution));
+			hitPoint.SetY((int)(poseY2World/m_scanMatchResolution));
+			if(cell->GetCellIndextest(hitPoint,index)==true)
+			{				
+				int disX=hitPoint.GetX() - cell->GetOriginPoint().GetX();
+				int disY=hitPoint.GetY() - cell->GetOriginPoint().GetY();
+				if(disX>=(cell->GetWidth())||disY>=(cell->GetHeight()))
+				{				
+					int debugIndex=0;
+					cell->DebugGetCellIndextest(hitPoint,debugIndex);
+					std::cout<<"hitpoint("<<hitPoint.GetX()<<","<<hitPoint.GetY()<<")";
+					std::cout<<"originpoint("<<cell->GetOriginPoint().GetX()<<","<<cell->GetOriginPoint().GetY()<<")"<<std::endl;
+					std::cout<<"disx="<<disX<<" disy="<<disY<<std::endl;
+					std::cout<<"width="<<cell->GetWidth()<<" height="<<cell->GetHeight()<<std::endl;		
+				} 
+// 				std::cout<<"hitpoint("<<hitPoint.GetX()<<","<<hitPoint.GetY()<<")";
+// 					std::cout<<" readings size="<<rScan->GetLaserCount();
+// 				std::cout<<"laserCount="<<laserCount<<std::endl;
+				score+=cell->GetScore(index);			
+				laserCount++;
+
 			}
 		}
 		angle+=angleIncrement;
 	}
-	return score;
-
+	if(laserCount!=0)
+		return score/(laserCount*gridStatus_Occupied);
+	else
+	{
+			ROS_ERROR("laser count is 0.");
+			return 0.0;
+	}
+	
 }
 
 void Mapper::CreateMap(OccupancyGrid& rOccGrid)
@@ -366,7 +453,7 @@ void Mapper::CreateMap(OccupancyGrid& rOccGrid)
 	int	pointX2World=0;
 	int	pointY2World=0;
 	float angleIncrement=LocalizedScan::m_angleIncrement;
-	
+	int index=0;
 	/*obtain the size of the map that will be created*/
 	for(VectorLocalizedScan::const_iterator itLocalizedScan=m_processedScans.begin();itLocalizedScan!=m_processedScans.end();++itLocalizedScan)
 	{
@@ -390,8 +477,8 @@ void Mapper::CreateMap(OccupancyGrid& rOccGrid)
 			angle+=angleIncrement;
 		}	
 	}
-	//std::cout<<"maxX="<<maxX<<"\tmaxY="<<maxY<<"\tminX="<<minX<<"\tminY="<<minY<<std::endl;	
-	std::cout<<"processed scan size="<<m_processedScans.size()<<std::endl;
+// 	std::cout<<"maxX="<<maxX<<"\tmaxY="<<maxY<<"\tminX="<<minX<<"\tminY="<<minY<<std::endl;	
+// 	std::cout<<"processed scan size="<<m_processedScans.size()<<std::endl;
 	int width=(int)((maxX-minX)/GetResolution());
 	int height=(int)((maxY-minY)/GetResolution());
 	Pose2 borderPose(minX,minY,0.0);
@@ -417,9 +504,10 @@ void Mapper::CreateMap(OccupancyGrid& rOccGrid)
 				pointY2World=(int)(poseY2World/GetResolution());
 				
 				Point readingPoint(pointX2World,pointY2World);
-				rOccGrid.SetMapValue(rOccGrid.GetGridIndex(readingPoint),gridStatus_Occupied);
-// 				std::cout<<"pointX2World="<<pointX2World<<"...pointY2World="<<pointY2World;
-// 				std::cout<<"...index"<<rOccGrid.GetGridIndex(readingPoint)<<std::endl;
+				index=rOccGrid.GetGridIndex(readingPoint);
+				rOccGrid.GetHitCellCntPtr()[index]++;
+				//rOccGrid.SetMapValue(index,gridStatus_Occupied);
+
 				LinearFunc lf(readingPoint,correctedPoint);
 				if(lf.GetType()==0||lf.GetType()==3)
 				{		
@@ -439,7 +527,9 @@ void Mapper::CreateMap(OccupancyGrid& rOccGrid)
 						result =(int)lf.CalcResult(down + step);
 						tmp.SetX(down+step);
 						tmp.SetY(result);
-						rOccGrid.SetMapValue(rOccGrid.GetGridIndex(tmp),gridStatus_Free);
+						index=rOccGrid.GetGridIndex(tmp);
+						rOccGrid.GetFreeCellCntPtr()[index]++;
+						//rOccGrid.SetMapValue(rOccGrid.GetGridIndex(tmp),gridStatus_Free);
 						
 					}
 				}
@@ -462,11 +552,31 @@ void Mapper::CreateMap(OccupancyGrid& rOccGrid)
 			
 						tmp.SetX(result);
 						tmp.SetY(down+step);
-						rOccGrid.SetMapValue(rOccGrid.GetGridIndex(tmp),gridStatus_Free);
+						index=rOccGrid.GetGridIndex(tmp);
+						rOccGrid.GetFreeCellCntPtr()[index]++;
+						//rOccGrid.SetMapValue(rOccGrid.GetGridIndex(tmp),gridStatus_Free);
 					}
 				}
 			}
 			angle+=angleIncrement;
 		}
 	}
+	int8_t* pDataPtr=rOccGrid.GetDataPtr();
+	int* pCellFreeCntPtr=rOccGrid.GetFreeCellCntPtr();
+	int* pCellHitCntPtr=rOccGrid.GetHitCellCntPtr();
+	for(int mapCnt=0;mapCnt<rOccGrid.GetSize();mapCnt++,pDataPtr++,pCellFreeCntPtr++,pCellHitCntPtr++)
+	{
+		if(*pCellFreeCntPtr>1)
+		{
+			double hitRatio=static_cast<double>(*pCellHitCntPtr)/static_cast<double>(*pCellFreeCntPtr);
+			//std::cout<<"hitRation="<<hitRatio<<"\t";
+			if(hitRatio>0.1)
+				rOccGrid.SetMapValue(mapCnt,gridStatus_Occupied);
+				//*pDataPtr=gridStatus_Occupied;
+			else
+				rOccGrid.SetMapValue(mapCnt,gridStatus_Free);
+				//*pDataPtr=gridStatus_Free;
+		}
+	}
+	std::cout<<std::endl;
 }

@@ -98,13 +98,16 @@ void LaserSlam::LaserCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 		GetLaserParam(m_laserParamManager,scan);
 	}	
 	Pose2 odomPose;
+	ros::Time lastTime=ros::Time::now();
 	if(AddScan(scan,m_laserParamManager,odomPose))
 	{
-		ROS_INFO("added scan at pose: %.3f %.3f %.3f", 
-              odomPose.GetX(),
-              odomPose.GetY(),
-              odomPose.GetHeading());
-		if(!gotMap/*||scan->header.stamp - lastUpdateTime > m_mapUpdateInterval*/)
+		ros::Time nowTime=ros::Time::now();
+		ROS_INFO("process time=%f",(nowTime-lastTime).toSec());
+// 		ROS_INFO("added scan at pose: %.3f %.3f %.3f", 
+//               odomPose.GetX(),
+//               odomPose.GetY(),
+//               odomPose.GetHeading());
+		if(!gotMap||scan->header.stamp - lastUpdateTime > m_mapUpdateInterval)
 		{
 			gotMap=true;
 			OccupancyGrid occ(GetResolution());
@@ -153,12 +156,14 @@ bool LaserSlam::AddScan(const sensor_msgs::LaserScan::ConstPtr& scan, LaserParam
 		return false;
 	VectorFloat		readings;
 	float angle=0.0;
+	int laserCount=0;
 	for(std::vector<float>::const_iterator it=scan->ranges.begin(); it != scan->ranges.end();++it)
 	{			
 		angle+=laserParamManager.GetAngleIncrement();
+		laserCount++;
 		readings.push_back(*it);		
 	}
-	LocalizedScan *newScan=new LocalizedScan(readings,odomPose);
+	LocalizedScan *newScan=new LocalizedScan(readings,odomPose,laserCount);
 
 	if(m_mapper.Process(newScan)==true)
 	{
