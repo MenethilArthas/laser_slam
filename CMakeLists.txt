@@ -46,14 +46,14 @@ include_directories(
 
 link_directories("~/serial/build/devel/lib" include)
 
-add_executable(coor_receiver src/coor_receiver.cpp)
-target_link_libraries(coor_receiver ${catkin_LIBRARIES} libserial.so)
+# add_executable(coor_receiver src/coor_receiver.cpp)
+# target_link_libraries(coor_receiver ${catkin_LIBRARIES} libserial.so)
 
 
 #add_executable(motor_control src/motor_control.cpp src/action_driver.cpp)
 #target_link_libraries(motor_control ${catkin_LIBRARIES})
 
-add_executable(laser_slam src/laser_slam.cpp src/mapper.cpp)
+add_executable(laser_slam src/laser_slam.cpp src/mapper.cpp src/Math.cpp)
 target_link_libraries(laser_slam ${catkin_LIBRARIES})
 
 

@@ -417,6 +417,7 @@ public:
 	bool Process(LocalizedScan* rScan);
 	bool HasMovedEnough(LocalizedScan* rScan,LocalizedScan* rLastScan);
 	double ScanMatch(LocalizedScan* rScan,Pose2& rbestPose,Matrix3& rCovariance);
+	void KartoScanMatch(LocalizedScan* rScan,Pose2& rbestPose,Matrix3& rCovariance);
 	void AddRunningScan(LocalizedScan* rScan);
 	void AddProcessedScan(LocalizedScan* rScan);
 	double Score(Cell* cell,Pose2 rPose,LocalizedScan* rScan);

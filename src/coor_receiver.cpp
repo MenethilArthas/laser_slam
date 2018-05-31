@@ -131,7 +131,7 @@ int main(int argc,char **argv)
 	        laser2BaseLinkTrans.transform.rotation = tf::createQuaternionMsgFromYaw(0.0);
             tfb.sendTransform(laser2BaseLinkTrans);
             tfb.sendTransform(baseLink2WorldTrans);
-			tfb.sendTransform(baseLink2OdomTrans);
+			//tfb.sendTransform(baseLink2OdomTrans);
 			coor_pub.publish(coorMsg);
 		}
 		

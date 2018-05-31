@@ -2,8 +2,8 @@
 BuildItems=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00l\x00a\x00s\x00e\x00r\x00_\x00s\x00l\x00a\x00m)
 
 [CMake]
-Build Directory Count=1
-Current Build Directory Index=0
+Build Directory Count=2
+Current Build Directory Index=1
 ProjectRootRelative=./
 
 [CMake][CMake Build Directory 0]
@@ -13,6 +13,36 @@ CMake Binary=file:///usr/bin/cmake
 Environment Profile=
 Extra Arguments=
 Install Directory=file:///home/arthas/laser_slam/install
+
+[CMake][CMake Build Directory 1]
+Build Directory Path=file:///home/arthas/laser_slam/laser_slam/build
+Build Type=Debug
+CMake Binary=file:///usr/bin/cmake
+Environment Profile=
+Extra Arguments=-DCATKIN_DEVEL_PREFIX=/home/arthas/laser_slam/laser_slam/devel
+Install Directory=file:///usr/local
+
+[Launch]
+Launch Configurations=Launch Configuration 0
+
+[Launch][Launch Configuration 0]
+Configured Launch Modes=execute
+Configured Launchers=nativeAppLauncher
+Name=laser_slam
+Type=Native Application
+
+[Launch][Launch Configuration 0][Data]
+Debugger Shell=
+Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x02\x00\x00\x00\x14\x00l\x00a\x00s\x00e\x00r\x00_\x00s\x00l\x00a\x00m\x00\x00\x00\x14\x00l\x00a\x00s\x00e\x00r\x00_\x00s\x00l\x00a\x00m)
+Dependency Action=Build
+Display Demangle Names=true
+Display Static Members=false
+GDB Path=file:///home/arthas/laser_slam/laser_slam/devel/lib/laser_slam/laser_slam
+Project Target=laser_slam,laser_slam
+Remote GDB Config Script=
+Remote GDB Run Script=
+Remote GDB Shell Script=
+Start With=ApplicationOutput
 
 [Project]
 VersionControlSupport=kdevgit

@@ -51,6 +51,7 @@ class LaserSlam
 		boost::thread* transform_thread_;
 		boost::mutex map_to_odom_mutex_;
 		tf::Transform map_to_odom_;
+		tf::Transform test;
 };
 
 LaserSlam::LaserSlam()
@@ -88,7 +89,7 @@ LaserSlam::~LaserSlam()
 	
 }
 void LaserSlam::LaserCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
-{
+{ 
 	nav_msgs::OccupancyGrid m_occGridMsg;
 	static ros::Time lastUpdateTime(0,0);
 	static bool gotMap=false;
@@ -103,10 +104,7 @@ void LaserSlam::LaserCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 	{
 		ros::Time nowTime=ros::Time::now();
 		ROS_INFO("process time=%f",(nowTime-lastTime).toSec());
-// 		ROS_INFO("added scan at pose: %.3f %.3f %.3f", 
-//               odomPose.GetX(),
-//               odomPose.GetY(),
-//               odomPose.GetHeading());
+
 		if(!gotMap||scan->header.stamp - lastUpdateTime > m_mapUpdateInterval)
 		{
 			gotMap=true;
@@ -184,19 +182,17 @@ bool LaserSlam::AddScan(const sensor_msgs::LaserScan::ConstPtr& scan, LaserParam
 			odom_to_map.setIdentity();
 		}
 
-// 		Pose2 offsetPose=corrected_pose-odom_pose;
-// 		double offsetAngle=corrected_pose.GetHeading()-odom_pose.GetHeading();
-
-//		boost::mutex::scoped_lock lock(map_to_odom_mutex_);  
+		test=odom_to_map;
 		map_to_odom_=tf::Transform(tf::Quaternion( odom_to_map.getRotation() ),
                                  tf::Point(      odom_to_map.getOrigin() ) ).inverse();
-// 		map_to_odom_=tf::Transform(tf::createQuaternionFromRPY(0,0,offsetAngle),tf::Vector3(offsetPose.GetX(),offsetPose.GetY(),0));
-		tfb.sendTransform(tf::StampedTransform (map_to_odom_, ros::Time::now(), m_worldFrame, m_odomFrame));
+// 		tfb.sendTransform(tf::StampedTransform (map_to_odom_, ros::Time::now(), m_worldFrame, m_odomFrame));
+		tfb.sendTransform(tf::StampedTransform (test, ros::Time::now(), m_odomFrame, m_worldFrame));
 		return true;
 	}
 	else
 	{
-		tfb.sendTransform(tf::StampedTransform (map_to_odom_, ros::Time::now(), m_worldFrame, m_odomFrame));
+// 		tfb.sendTransform(tf::StampedTransform (map_to_odom_, ros::Time::now(), m_worldFrame, m_odomFrame));
+		tfb.sendTransform(tf::StampedTransform (test, ros::Time::now(), m_odomFrame, m_worldFrame));
 		delete newScan;
 		return false;
 	}
